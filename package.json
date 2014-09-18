@@ -1,0 +1,31 @@
+{
+  "name": "quick-directory",
+  "version": "0.0.1",
+  "description": "",
+  "bin": {
+    "qd": "./app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jrnewell/quick-directory.git"
+  },
+  "dependencies" : {
+    "commander": "latest",
+    "chalk": "latest",
+    "jsonfile": "latest",
+    "lodash": "latest",
+    "coffee-script": "latest"
+  },
+  "keywords": [
+    "quick", "directory", "quick directory", "utility", "working", "working directory", "productivity"
+  ],
+  "author": "James Newell <james.newell@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jrnewell/quick-directory/issues"
+  },
+  "engines": {
+    "node": ">=0.10",
+    "npm": ">=1.4"
+  }
+}
