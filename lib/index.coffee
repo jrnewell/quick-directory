@@ -5,21 +5,45 @@ fs = require('fs')
 path = require('path')
 _ = require('lodash')
 
+fatalError = (msg) ->
+  console.error chalk.red(msg) if msg?
+  process.exit(1)
+
+programDone = () ->
+  process.exit 0
+
 runCommand = (cmd) ->
   return () ->
     # make these variables available outside of initialize scope
-    dataDir = currentSchemeFile = currentScheme = schemeFile = commands = undefined
+    dataDir = data = dataFile = currentScheme = scheme = commands = undefined
+
+    schemeMsg = (msg) ->
+      console.log chalk.cyan("[ #{currentScheme} ]") + " - #{msg}"
+
+    saveDataFile = () ->
+      fs.writeFileSync(dataFile, JSON.stringify(data), "utf8")
+
+    initalizeScheme = (scheme) ->
+        data.schemes[scheme] =
+          slots: {}
+        saveDataFile()
 
     initialize = () ->
       dataDir = process.env.QDHOME ? path.join(process.env.HOME, ".quick-dir")
       fs.mkdirSync(dataDir) unless fs.existsSync(dataDir)
-      currentSchemeFile = path.join(dataDir, "currentScheme")
-      currentScheme = null
-      if fs.existsSync(currentSchemeFile)
-        currentScheme = fs.readFileSync(currentSchemeFile, 'utf8')
-        schemeFile = path.join(dataDir, "#{currentScheme}.scheme")
+      dataFile = path.join(dataDir, "data.json")
+      if fs.existsSync dataFile
+        data = JSON.parse(fs.readFileSync(dataFile, "utf8"))
       else
-        commands.changeScheme "default"
+        data =
+          currentScheme: "default"
+          schemes: {}
+        initalizeScheme "default"
+      currentScheme = data.currentScheme
+      fatalError("currentScheme property is missing in data.json") unless _.isString(currentScheme)
+      scheme = data.schemes[currentScheme]
+      fatalError("#{currentScheme} scheme object is missing in data.json") unless _.isObject(scheme)
+      fatalError("#{currentScheme} scheme object is missing slots property in data.json") unless _.isObject(scheme.slots)
 
     #prompt.message = "(crypto-pass)"
     #cacheFile = (commander.config ? commander.config : path.join(getUserHome(), ".crypto-pass"));
@@ -34,68 +58,55 @@ runCommand = (cmd) ->
     commands =
       printCurrentScheme: () ->
         console.log currentScheme
-        return 0
-
-      initalizeSchemeFile: () ->
-        init =
-          slots: {}
-        fs.writeFileSync(schemeFile, JSON.stringify(init), "utf8")
+        programDone()
 
       changeScheme: (name) ->
-        return 1 if name is currentScheme
-        return commands.printCurrentScheme() unless name?
-        fs.writeFileSync(currentSchemeFile, name, "utf8")
-        currentScheme = name
-        schemeFile = path.join(dataDir, "#{currentScheme}.scheme")
-        commands.initalizeSchemeFile() unless fs.existsSync(schemeFile)
-        return 0
+        commands.printCurrentScheme() unless name?
+        programDone() if name is currentScheme
+
+        data.currentScheme = currentScheme = name
+        console.log "changing scheme to #{chalk.cyan name}"
+        if _.isObject(data.schemes[name])
+          saveDataFile()
+        else
+          console.log chalk.grey "initializing empty scheme object"
+          initalizeScheme name
+        programDone()
 
       listSlots: () ->
-        return 1 unless fs.existsSync schemeFile
-        scheme = JSON.parse(fs.readFileSync(schemeFile), "utf8")
-        console.log currentScheme
+        schemeMsg "listing slots"
         console.log "------------------------------"
-        for idx, slot of scheme.slots
-          console.log "#{idx}\t#{slot}"
-        return 0
+        slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
+        for pair in slots
+          console.log "#{chalk.yellow pair[0]}\t#{chalk.grey pair[1]}"
+        programDone()
 
       getSlot: (idx) ->
-        return 1 unless fs.existsSync schemeFile
         idx = parseInt(idx)
-        return 1 unless _.isNumber(idx) and not _.isNaN(idx)
-        scheme = JSON.parse(fs.readFileSync(schemeFile), "utf8")
+        fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
         _path = scheme.slots[idx]
-        return 1 unless _.isString(_path)
+        fatalError "path #{_path} is not a string" unless _.isString(_path)
         console.log _path
-        return 0
+        programDone()
 
       saveSlot: (idx, _path) ->
-        #console.log "foo1: #{idx} #{_path} #{schemeFile}"
-        return 1 unless fs.existsSync schemeFile
         idx = parseInt(idx)
-        #console.log "foo1.b: #{idx}"
-        return 1 unless _.isNumber(idx) and not _.isNaN(idx)
-        #console.log "foo1.c: #{schemeFile}"
-        scheme = JSON.parse(fs.readFileSync(schemeFile), "utf8")
+        fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
         _path = process.cwd() unless _.isString(_path)
-        return 1 unless fs.existsSync _path
-        #console.log "foo2: #{idx} #{_path} #{JSON.stringify(scheme)}"
+        fatalError "path #{_path} does not exist" unless fs.existsSync _path
         scheme.slots[idx] = _path
-        #console.log "foo3: #{JSON.stringify(scheme)}"
-        fs.writeFileSync(schemeFile, JSON.stringify(scheme), "utf8")
-        #console.log "foo4"
-        return 0
+        schemeMsg "saving slot #{chalk.yellow idx} as #{chalk.grey _path}"
+        saveDataFile()
+        programDone()
 
       clearSlots: () ->
-        return 1 unless fs.existsSync schemeFile
-        scheme = JSON.parse(fs.readFileSync(schemeFile), "utf8")
+        schemeMsg chalk.yellow "clearing all slots"
         scheme.slots = {}
-        fs.writeFileSync(schemeFile, JSON.stringify(scheme), "utf8")
-        return 0
+        saveDataFile()
+        programDone()
 
       compactSlots: () ->
-        return 1 unless fs.existsSync schemeFile
-        scheme = JSON.parse(fs.readFileSync(schemeFile), "utf8")
+        schemeMsg "compacting slot idx numbers"
         slotsArray = []
         for idx, slot of scheme.slots
           slotsArray.push
@@ -105,12 +116,10 @@ runCommand = (cmd) ->
         scheme.slots = {}
         for obj, idx in slotsArray
           scheme.slots[idx] = obj.slot
-        fs.writeFileSync(schemeFile, JSON.stringify(scheme), "utf8")
-        return 0
+        saveDataFile()
+        programDone()
 
     initialize()
-    #util = require 'util'
-    #console.log "#{arguments} : #{util.inspect(arguments)}"
     commands[cmd].apply(this, arguments);
 
 commander
