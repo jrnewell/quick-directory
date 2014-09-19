@@ -15,10 +15,10 @@ programDone = () ->
 runCommand = (cmd) ->
   return () ->
     # make these variables available outside of initialize scope
-    dataDir = data = dataFile = currentScheme = scheme = commands = undefined
+    dataDir = data = dataFile = currentScheme = scheme = commands = colors = undefined
 
     schemeMsg = (msg) ->
-      console.log chalk.cyan("[ #{currentScheme} ]") + " - #{msg}"
+      console.error chalk.cyan("[ #{currentScheme} ]") + " - #{msg}"
 
     saveDataFile = () ->
       fs.writeFileSync(dataFile, JSON.stringify(data), "utf8")
@@ -37,9 +37,11 @@ runCommand = (cmd) ->
       else
         data =
           currentScheme: "default"
+          color: true
           schemes: {}
         initalizeScheme "default"
       currentScheme = data.currentScheme
+      chalk.enabled = colors = (if data.color? then data.color else true)
       fatalError("currentScheme property is missing in data.json") unless _.isString(currentScheme)
       scheme = data.schemes[currentScheme]
       fatalError("#{currentScheme} scheme object is missing in data.json") unless _.isObject(scheme)
@@ -56,8 +58,19 @@ runCommand = (cmd) ->
     #config = cache._config;
 
     commands =
+      init: () ->
+        console.log """
+        function qd() {
+          local newPath
+          newPath=$(/Users/james/node.js/quick-directory/app.js get $1)
+          if [ $? -eq 0 ]; then
+            cd "$newPath"
+          fi
+        }
+        """
+
       printCurrentScheme: () ->
-        console.log currentScheme
+        console.error currentScheme
         programDone()
 
       changeScheme: (name) ->
@@ -65,21 +78,38 @@ runCommand = (cmd) ->
         programDone() if name is currentScheme
 
         data.currentScheme = currentScheme = name
-        console.log "changing scheme to #{chalk.cyan name}"
+        console.error "changing scheme to #{chalk.cyan name}"
         if _.isObject(data.schemes[name])
           saveDataFile()
         else
-          console.log chalk.grey "initializing empty scheme object"
+          console.error chalk.grey "initializing empty scheme object"
           initalizeScheme name
         programDone()
 
-      listSlots: () ->
+      listSchemes: () ->
+        console.error "schemes"
+        console.error "------------------------------"
+        for scheme in _.keys(data.schemes)
+          console.error chalk.gray scheme
+
+      listSlots: (noExit) ->
         schemeMsg "listing slots"
-        console.log "------------------------------"
+        console.error "------------------------------"
         slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
         for pair in slots
-          console.log "#{chalk.yellow pair[0]}\t#{chalk.grey pair[1]}"
-        programDone()
+          console.error "#{chalk.yellow pair[0]}\t#{chalk.grey pair[1]}"
+        programDone() unless _.isBoolean(noExit) and noExit
+
+      pickSlot: () ->
+        commands.listSlots(true)
+        readline = require "readline"
+        rl = readline.createInterface
+          input: process.stdin
+          output: process.stderr
+          terminal: colors
+        rl.on "line", (line) ->
+          commands.getSlot(line.trim())
+        rl.prompt()
 
       getSlot: (idx) ->
         idx = parseInt(idx)
@@ -126,28 +156,40 @@ commander
   .version(require("../package.json").version)
 
 commander
+  .command("init")
+  .action(runCommand("init"));
+
+commander
   .command('scheme [name]')
-  .description('changes schemes (list current scheme is no name is given)')
+  .description('changes schemes (prints current scheme if no name is given)')
   .action(runCommand("changeScheme"));
 
 commander
-  .command("listSlots")
+  .command("schemes")
+  .action(runCommand("listSchemes"));
+
+commander
+  .command("list")
   .action(runCommand("listSlots"));
 
 commander
-  .command("getSlot <idx>")
+  .command("pick")
+  .action(runCommand("pickSlot"));
+
+commander
+  .command("get <idx>")
   .action(runCommand("getSlot"));
 
 commander
-  .command("saveSlot <idx> [path]")
+  .command("set <idx> [path]")
   .action(runCommand("saveSlot"));
 
 commander
-  .command("clearSlots")
+  .command("clear")
   .action(runCommand("clearSlots"));
 
 commander
-  .command("compactSlots")
+  .command("compact")
   .action(runCommand("compactSlots"));
 
 commander
