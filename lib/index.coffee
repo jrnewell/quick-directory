@@ -60,12 +60,18 @@ runCommand = (cmd) ->
     commands =
       init: () ->
         console.log """
-        function qd() {
+        function _qdwrap() {
           local newPath
-          newPath=$(/Users/james/node.js/quick-directory/app.js get $1)
+          newPath=$(/Users/james/node.js/quick-directory/app.js $1 "$@")
           if [ $? -eq 0 ]; then
             cd "$newPath"
           fi
+        }
+        function q() {
+          _qdwrap get $1
+        }
+        function qq() {
+          _qdwrap pick
         }
         """
 
@@ -92,6 +98,13 @@ runCommand = (cmd) ->
         for scheme in _.keys(data.schemes)
           console.error chalk.gray scheme
 
+      dropScheme: (scheme) ->
+        fatalError "Scheme #{scheme} does not exist" unless _.isObject(data.schemes[scheme])
+        console.error "Droping scheme #{chalk.cyan scheme}"
+        delete data.schemes[scheme]
+        writeFileSync()
+        programDone()
+
       listSlots: (noExit) ->
         schemeMsg "listing slots"
         console.error "------------------------------"
@@ -102,13 +115,18 @@ runCommand = (cmd) ->
 
       pickSlot: () ->
         commands.listSlots(true)
+        programDone() unless _.keys(scheme.slots).length > 0
         readline = require "readline"
         rl = readline.createInterface
           input: process.stdin
           output: process.stderr
           terminal: colors
         rl.on "line", (line) ->
-          commands.getSlot(line.trim())
+          idx = line.trim()
+          if _.isString(scheme.slots[idx])
+            commands.getSlot(line.trim())
+          else
+            rl.prompt()
         rl.prompt()
 
       getSlot: (idx) ->
@@ -167,6 +185,10 @@ commander
 commander
   .command("schemes")
   .action(runCommand("listSchemes"));
+
+commander
+  .command("drop")
+  .action(runCommand("dropScheme"));
 
 commander
   .command("list")
