@@ -53,16 +53,6 @@ runCommand = (cmd) ->
       fatalError("#{currentScheme} scheme object is missing in data.json") unless _.isObject(scheme)
       fatalError("#{currentScheme} scheme object is missing slots property in data.json") unless _.isObject(scheme.slots)
 
-    #prompt.message = "(crypto-pass)"
-    #cacheFile = (commander.config ? commander.config : path.join(getUserHome(), ".crypto-pass"));
-
-    #if (fs.existsSync(cacheFile)) {
-    #  cache = jsonfile.readFileSync(cacheFile);
-    #}
-
-    # load config
-    #config = cache._config;
-
     callCommand = (cmd) ->
       disableExit = true
       args = Array.prototype.slice.call(arguments);
@@ -75,8 +65,10 @@ runCommand = (cmd) ->
       init: () ->
         console.log """
         function _qdwrap() {
-          local newPath
-          newPath=$(/Users/james/node.js/quick-directory/app.js $1 "$@")
+          local cmd newPath
+          cmd="$1"
+          shift
+          newPath=$(/Users/james/node.js/quick-directory/app.js "$cmd" "$@")
           if [ $? -eq 0 ]; then
             cd "$newPath"
           fi
@@ -87,11 +79,14 @@ runCommand = (cmd) ->
         function qq() {
           _qdwrap pick
         }
+        function hh() {
+          _qdwrap pick-hist $1
+        }
         function cd()
         {
           builtin cd "$@"
           if [[ $? -eq 0 ]]; then
-            /Users/james/node.js/quick-directory/app.js add-hist
+            (/Users/james/node.js/quick-directory/app.js add-hist &)
           fi
         }
         """
@@ -200,7 +195,7 @@ runCommand = (cmd) ->
       addHistory: (_path) ->
         _path = process.cwd() unless _.isString(_path)
         fatalError "path #{_path} does not exist" unless fs.existsSync _path
-        history.slots = _.remove(history.slots, _path)
+        history.slots = (slot for slot in history.slots when slot isnt _path)
         history.slots.unshift _path
         history.slots.pop() if history.length > data.history.max
         saveDataFile()
