@@ -1,21 +1,23 @@
-jsonfile = require('jsonfile')
-commander = require('commander')
-chalk = require('chalk')
-fs = require('fs')
-path = require('path')
-_ = require('lodash')
+jsonfile = require("jsonfile")
+commander = require("commander")
+chalk = require("chalk")
+fs = require("fs")
+path = require("path")
+_ = require("lodash")
 
 fatalError = (msg) ->
   console.error chalk.red(msg) if msg?
   process.exit(1)
 
+disableExit = false
 programDone = () ->
-  process.exit 0
+  process.exit 0 unless disableExit
 
 runCommand = (cmd) ->
   return () ->
     # make these variables available outside of initialize scope
-    dataDir = data = dataFile = currentScheme = scheme = commands = colors = undefined
+    dataDir = data = dataFile = currentScheme = scheme = commands = colors =
+      history = undefined
 
     schemeMsg = (msg) ->
       console.error chalk.cyan("[ #{currentScheme} ]") + " - #{msg}"
@@ -39,8 +41,12 @@ runCommand = (cmd) ->
           currentScheme: "default"
           color: true
           schemes: {}
+          history:
+            slots: []
+            max: 10
+
         initalizeScheme "default"
-      currentScheme = data.currentScheme
+      {currentScheme, history} = data
       chalk.enabled = colors = (if data.color? then data.color else true)
       fatalError("currentScheme property is missing in data.json") unless _.isString(currentScheme)
       scheme = data.schemes[currentScheme]
@@ -57,6 +63,14 @@ runCommand = (cmd) ->
     # load config
     #config = cache._config;
 
+    callCommand = (cmd) ->
+      disableExit = true
+      args = Array.prototype.slice.call(arguments);
+      args.shift()
+      commands[cmd].apply(this, args)
+      disableExit = false
+
+    # eval "$(./app.js init)"
     commands =
       init: () ->
         console.log """
@@ -72,6 +86,13 @@ runCommand = (cmd) ->
         }
         function qq() {
           _qdwrap pick
+        }
+        function cd()
+        {
+          builtin cd "$@"
+          if [[ $? -eq 0 ]]; then
+            /Users/james/node.js/quick-directory/app.js add-hist
+          fi
         }
         """
 
@@ -105,16 +126,16 @@ runCommand = (cmd) ->
         writeFileSync()
         programDone()
 
-      listSlots: (noExit) ->
+      listSlots: () ->
         schemeMsg "listing slots"
         console.error "------------------------------"
         slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
         for pair in slots
           console.error "#{chalk.yellow pair[0]}\t#{chalk.grey pair[1]}"
-        programDone() unless _.isBoolean(noExit) and noExit
+        programDone()
 
       pickSlot: () ->
-        commands.listSlots(true)
+        callCommand "listSlots"
         programDone() unless _.keys(scheme.slots).length > 0
         readline = require "readline"
         rl = readline.createInterface
@@ -160,15 +181,62 @@ runCommand = (cmd) ->
           slotsArray.push
             idx: parseInt(idx)
             slot: slot
-        slotsArray = _.sortBy(slotsArray, 'idx')
+        slotsArray = _.sortBy(slotsArray, "idx")
         scheme.slots = {}
         for obj, idx in slotsArray
           scheme.slots[idx] = obj.slot
         saveDataFile()
         programDone()
 
+      # history commands
+      getHistory: (idx) ->
+        idx = parseInt(idx)
+        fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0 and idx < history.slots.length
+        _path = history.slots[idx]
+        fatalError "path #{_path} is not a string" unless _.isString(_path)
+        console.log _path
+        programDone()
+
+      addHistory: (_path) ->
+        _path = process.cwd() unless _.isString(_path)
+        fatalError "path #{_path} does not exist" unless fs.existsSync _path
+        history.slots = _.remove(history.slots, _path)
+        history.slots.unshift _path
+        history.slots.pop() if history.length > data.history.max
+        saveDataFile()
+        programDone()
+
+      clearHistory: () ->
+        console.error chalk.yellow "clearing history"
+        data.history.slots = []
+        saveDataFile()
+        programDone()
+
+      listHistory: () ->
+        console.error "listing history"
+        console.error "------------------------------"
+        for _path, idx in history.slots
+          console.error "#{chalk.yellow idx}\t#{chalk.grey _path}"
+        programDone()
+
+      pickHistory: () ->
+        callCommand "listHistory"
+        programDone() unless history.slots.length > 0
+        readline = require "readline"
+        rl = readline.createInterface
+          input: process.stdin
+          output: process.stderr
+          terminal: colors
+        rl.on "line", (line) ->
+          idx = line.trim()
+          if idx >= 0 and idx < history.slots.length and _.isString(history.slots[idx])
+            commands.getHistory(line.trim())
+          else
+            rl.prompt()
+        rl.prompt()
+
     initialize()
-    commands[cmd].apply(this, arguments);
+    commands[cmd].apply(this, arguments)
 
 commander
   .version(require("../package.json").version)
@@ -178,8 +246,8 @@ commander
   .action(runCommand("init"));
 
 commander
-  .command('scheme [name]')
-  .description('changes schemes (prints current scheme if no name is given)')
+  .command("scheme [name]")
+  .description("changes schemes (prints current scheme if no name is given)")
   .action(runCommand("changeScheme"));
 
 commander
@@ -215,8 +283,20 @@ commander
   .action(runCommand("compactSlots"));
 
 commander
-  .command('*')
-  .description('output usage information')
+  .command("add-hist")
+  .action(runCommand("addHistory"));
+
+commander
+  .command("clear-hist")
+  .action(runCommand("clearHistory"));
+
+commander
+  .command("pick-hist")
+  .action(runCommand("pickHistory"));
+
+commander
+  .command("*")
+  .description("output usage information")
   .action(commander.help)
 
 commander.parse(process.argv);
