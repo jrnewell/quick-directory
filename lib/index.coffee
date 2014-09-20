@@ -17,16 +17,17 @@ runCommand = (cmd) ->
   return () ->
     # make these variables available outside of initialize scope
     dataDir = data = dataFile = currentScheme = scheme = commands = colors =
-      history = undefined
+      autoCompact = history = undefined
 
-    schemeMsg = (msg) ->
-      console.error chalk.cyan("[ #{currentScheme} ]") + " - #{msg}"
+    schemeMsg = (msg, scheme) ->
+      console.error chalk.cyan("[ #{(if scheme? then scheme else currentScheme)} ]") + " - #{msg}"
 
     saveDataFile = () ->
       fs.writeFileSync(dataFile, JSON.stringify(data), "utf8")
 
     initalizeScheme = (scheme) ->
         data.schemes[scheme] =
+          next: 0
           slots: {}
         saveDataFile()
 
@@ -40,13 +41,14 @@ runCommand = (cmd) ->
         data =
           currentScheme: "default"
           color: true
+          autoCompact: true
           schemes: {}
           history:
             slots: []
             max: 10
 
         initalizeScheme "default"
-      {currentScheme, history} = data
+      {currentScheme, history, autoCompact} = data
       chalk.enabled = colors = (if data.color? then data.color else true)
       fatalError("currentScheme property is missing in data.json") unless _.isString(currentScheme)
       scheme = data.schemes[currentScheme]
@@ -59,6 +61,10 @@ runCommand = (cmd) ->
       args.shift()
       commands[cmd].apply(this, args)
       disableExit = false
+
+    doAutoCompact = () ->
+      schemeMsg "auto compacting is enabled"
+      callCommand "compactSlots"
 
     # eval "$(./app.js init)"
     commands =
@@ -153,12 +159,41 @@ runCommand = (cmd) ->
         console.log _path
         programDone()
 
-      saveSlot: (idx, _path) ->
+      removeSlot: (idx) ->
         idx = parseInt(idx)
         fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
+        delete scheme.slots[idx]
+        doAutoCompact() if autoCompact
+        saveDataFile()
+        programDone()
+
+      switchSlots: (idx1, idx2) ->
+        idx1 = parseInt(idx1)
+        fatalError "argument <idx1> should be a whole number" unless _.isNumber(idx1) and not _.isNaN(idx1) and idx1 >= 0
+        idx2 = parseInt(idx2)
+        fatalError "argument <idx2> should be a whole number" unless _.isNumber(idx2) and not _.isNaN(idx2) and idx2 >= 0
+        fatalError "argument <idx1> is not valid" unless _.isString(scheme.slots[idx1])
+        fatalError "argument <idx2> is not valid" unless _.isString(scheme.slots[idx2])
+        temp = scheme.slots[idx1]
+        scheme.slots[idx1] = scheme.slots[idx2]
+        scheme.slots[idx2] = temp
+        saveDataFile()
+        programDone()
+
+      saveSlot: (idx, _path) ->
+        if idx? and idx.match /^[0-9]+$/
+          idx = parseInt(idx)
+          fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
+        else
+          # if idx is a string but not digits, assume it is the path
+          _path = idx if _.isString(idx)
+          idx = scheme.next
+
         _path = process.cwd() unless _.isString(_path)
         fatalError "path #{_path} does not exist" unless fs.existsSync _path
         scheme.slots[idx] = _path
+        doAutoCompact() if autoCompact and idx > scheme.next
+        scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
         schemeMsg "saving slot #{chalk.yellow idx} as #{chalk.grey _path}"
         saveDataFile()
         programDone()
@@ -166,6 +201,7 @@ runCommand = (cmd) ->
       clearSlots: () ->
         schemeMsg chalk.yellow "clearing all slots"
         scheme.slots = {}
+        scheme.next = 0
         saveDataFile()
         programDone()
 
@@ -180,6 +216,7 @@ runCommand = (cmd) ->
         scheme.slots = {}
         for obj, idx in slotsArray
           scheme.slots[idx] = obj.slot
+        scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
         saveDataFile()
         programDone()
 
@@ -208,7 +245,7 @@ runCommand = (cmd) ->
         programDone()
 
       listHistory: () ->
-        console.error "listing history"
+        schemeMsg "listing slots", "history"
         console.error "------------------------------"
         for _path, idx in history.slots
           console.error "#{chalk.yellow idx}\t#{chalk.grey _path}"
@@ -266,7 +303,15 @@ commander
   .action(runCommand("getSlot"));
 
 commander
-  .command("set <idx> [path]")
+  .command("rm [idx]")
+  .action(runCommand("removeSlot"));
+
+commander
+  .command("switch <idx1> <idx2>")
+  .action(runCommand("switchSlots"));
+
+commander
+  .command("set [idx] [path]")
   .action(runCommand("saveSlot"));
 
 commander
