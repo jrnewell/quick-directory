@@ -16,44 +16,78 @@ programDone = () ->
 runCommand = (cmd) ->
   return () ->
     # make these variables available outside of initialize scope
-    dataDir = data = dataFile = currentScheme = scheme = commands = colors =
-      autoCompact = history = undefined
+    dataDir = config = configFile = schemes = schemesFile = scheme = currentScheme =
+      history = historyFile = commands = colors = autoCompact = history = maxHistory =
+      undefined
 
     schemeMsg = (msg, scheme) ->
       console.error chalk.cyan("[ #{(if scheme? then scheme else currentScheme)} ]") + " - #{msg}"
 
-    saveDataFile = () ->
-      fs.writeFileSync(dataFile, JSON.stringify(data), "utf8")
+    saveJsonFile = (fileName, obj) ->
+      fs.writeFileSync(fileName, JSON.stringify(obj), "utf8")
 
-    initalizeScheme = (scheme) ->
-        data.schemes[scheme] =
+    loadJsonFile = (fileName, getInitObj) ->
+      return JSON.parse(fs.readFileSync(fileName, "utf8")) if fs.existsSync fileName
+      obj = getInitObj()
+      saveJsonFile fileName, obj
+      return obj
+
+    saveConfgFile   = () -> saveJsonFile(config, configFile)
+    saveSchemesFile = () -> saveJsonFile(schemes, schemesFile)
+    saveHistoryFile = () -> saveJsonFile(history, historyFile)
+
+    initConfigObj = () ->
+      return {
+        color: true
+        currentScheme: "default"
+        autoCompact: true
+        maxHistory: 10
+      }
+
+    initSchemesObj = () ->
+      return {
+        default:
           next: 0
           slots: {}
-        saveDataFile()
+      }
+
+    initHistoryObj = () ->
+      return {
+        slots: []
+      }
+
+    loadConfgFile   = () ->
+      config = loadJsonFile(configFile, initConfigObj)
+
+    loadSchemesFile = () ->
+      schemes = loadJsonFile(schemesFile, initSchemesObj)
+      scheme = schemes[currentScheme]
+      return if _.isObject(scheme)
+      console.error chalk.yellow "currentScheme is missing from #{schemesFile}, setting to 'default' scheme"
+      initalizeScheme "default" unless _.isObject(schemes["default"])
+      currentScheme = "default"
+      scheme = schemes[currentScheme]
+
+    loadHistoryFile = () ->
+      history = loadJsonFile(historyFile, initHistoryObj)
+
+    initalizeScheme = (scheme) ->
+      schemes[scheme] =
+        next: 0
+        slots: {}
+      saveSchemesFile()
 
     initialize = () ->
       dataDir = process.env.QDHOME ? path.join(process.env.HOME, ".quick-dir")
       fs.mkdirSync(dataDir) unless fs.existsSync(dataDir)
-      dataFile = path.join(dataDir, "data.json")
-      if fs.existsSync dataFile
-        data = JSON.parse(fs.readFileSync(dataFile, "utf8"))
-      else
-        data =
-          currentScheme: "default"
-          color: true
-          autoCompact: true
-          schemes: {}
-          history:
-            slots: []
-            max: 10
+      configFile = path.join(dataDir, "config.json")
+      schemesFile = path.join(dataDir, "schemes.json")
+      historyFile = path.join(dataDir, "history.json")
+      loadConfgFile()
 
-        initalizeScheme "default"
-      {currentScheme, history, autoCompact} = data
-      chalk.enabled = colors = (if data.color? then data.color else true)
-      fatalError("currentScheme property is missing in data.json") unless _.isString(currentScheme)
-      scheme = data.schemes[currentScheme]
-      fatalError("#{currentScheme} scheme object is missing in data.json") unless _.isObject(scheme)
-      fatalError("#{currentScheme} scheme object is missing slots property in data.json") unless _.isObject(scheme.slots)
+      {currentScheme, autoCompact, maxHistory} = config
+      chalk.enabled = colors = (if config.color? then config.color else true)
+      fatalError("currentScheme property is missing in config.json") unless _.isString(currentScheme)
 
     callCommand = (cmd) ->
       disableExit = true
@@ -96,6 +130,22 @@ runCommand = (cmd) ->
           fi
         }
         """
+
+      # _wd_scheme_completion()
+      # {
+      #   local cur schemedir origdir schemelist
+      #   origdir=${PWD}
+      #   schemedir=${WDHOME}
+      #   COMPREPLY=()
+      #   cur=${COMP_WORDS[COMP_CWORD]}
+      #   # TODO could probably do this without cd to the scheme dir
+      #   cd ${schemedir}
+      #   schemelist="$(compgen -G "${cur}*.scheme")"
+      #   schemelist=${schemelist#history}
+      #   COMPREPLY=( ${schemelist//.scheme/} )
+      #   cd ${origdir}
+      # }
+      # complete -o nospace -F _wd_scheme_completion wdscheme
 
       printCurrentScheme: () ->
         console.error currentScheme
@@ -234,7 +284,7 @@ runCommand = (cmd) ->
         fatalError "path #{_path} does not exist" unless fs.existsSync _path
         history.slots = (slot for slot in history.slots when slot isnt _path)
         history.slots.unshift _path
-        history.slots.pop() if history.length > data.history.max
+        history.slots.pop() if history.length > maxHistory
         saveDataFile()
         programDone()
 
