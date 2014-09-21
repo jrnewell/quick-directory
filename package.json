@@ -14,7 +14,8 @@
     "chalk": "latest",
     "jsonfile": "latest",
     "lodash": "latest",
-    "coffee-script": "latest"
+    "coffee-script": "latest",
+    "mkdirp": "latest"
   },
   "keywords": [
     "quick", "directory", "quick directory", "utility", "working", "working directory", "productivity"
