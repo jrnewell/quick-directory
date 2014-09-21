@@ -2,12 +2,12 @@ commander = require("commander")
 # chalk = require("chalk")
 fs = require("fs")
 path = require("path")
-# _ = require("lodash")
+_ = require("lodash")
 util = require("./util")
 config = require("./config")
 cmds = require("./commands")
 
-{runCommand, emitter} = util
+{runCommand, emitter, programDone} = util
 
 # load plugins
 util.requireFiles path.join(__dirname, "plugins"), /(\.coffee|\.js)$/
@@ -42,7 +42,24 @@ defaultCommands =
         (/Users/james/node.js/quick-directory/app.js _cd &)
       fi
     }
+    _qd_completion()
+    {
+      local cur prev opts job
+      COMPREPLY=()
+      job="${COMP_WORDS[0]}"
+      cur="${COMP_WORDS[COMP_CWORD]}"
+      prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+      opts=$(${job} _bash_complete)
+      COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+      return 0
+    }
+    complete -o nospace -F _qd_completion /Users/james/node.js/quick-directory/app.js
     """
+    programDone()
+
+  _bash_complete: () ->
+    console.log (cmd._name for cmd in commander.commands when cmd._name isnt "*").join(" ")
     programDone()
 
   _cd: () ->
@@ -53,16 +70,20 @@ defaultCommands =
 
 cmds.extend defaultCommands
 
+
+# check for private commands first (start with underscore)
+if process.argv.length == 3
+  privateCmds = (cmd for cmd in _.keys(cmds.commands) when cmd.match /^_\w+$/)
+  cmd = process.argv[2]
+  for privateCmd in privateCmds
+    do runCommand(cmd) if cmd is privateCmd
+
 commander
   .version(require("../package.json").version)
 
 commander
   .command("init")
   .action(runCommand("init"));
-
-commander
-  .command("_cd")
-  .action(runCommand("_cd"));
 
 commander
   .command("*")
