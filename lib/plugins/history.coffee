@@ -23,7 +23,7 @@ initHistoryObj = () ->
   }
 
 loadHistory = () ->
-  data = loadJsonFile(historyFile, initHistoryObj)
+  data = util.loadJsonFile(historyFile, initHistoryObj)
   history = data.slots
   maxHistory = data.max
   return if _.isArray(history)
@@ -57,16 +57,16 @@ historyCommands =
   addHistory: (_path) ->
     _path = process.cwd() unless _.isString(_path)
     fatalError "path #{_path} does not exist" unless fs.existsSync _path
-    history = (slot for slot in history when slot isnt _path)
+    data.slots = history = (slot for slot in history when slot isnt _path)
     history.unshift _path
     history.pop() if history.length > maxHistory
-    saveDataFile()
+    saveHistory()
     programDone()
 
   clearHistory: () ->
     console.error chalk.yellow "clearing history"
-    data.history = []
-    saveDataFile()
+    data.slots = history = []
+    saveHistory()
     programDone()
 
   listHistory: () ->
@@ -87,20 +87,21 @@ historyCommands =
     rl.on "line", (line) ->
       idx = line.trim()
       if idx >= 0 and idx < history.length and _.isString(history[idx])
-        commands.getHistory(line.trim())
+        historyCommands.getHistory(line.trim())
       else
         rl.prompt()
     rl.prompt()
 
 cmds.extend historyCommands
 
+# listen for _cd events
+util.emitter.on "cd:path", (_path) ->
+  loadHistory()
+  historyCommands.addHistory(_path)
+
 #
 # add commander commands
 #
-
-# commander
-#   .command("init")
-#   .action(runHistoryCmd("init"));
 
 commander
   .command("add-hist")
