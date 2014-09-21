@@ -3,7 +3,7 @@ path = require("path")
 chalk = require("chalk")
 util = require("./util")
 
-{saveJsonFile, ensureDirExists, emitter} = util
+{saveJsonFile, loadJsonFile, ensureDirExists, emitter} = util
 dataDir = config = configFile = undefined
 
 saveConfg = () ->
@@ -36,3 +36,6 @@ module.exports = {
   getConfig: getConfig
   getDataDir: getDataDir
 }
+
+# to prevent circular require dependencies
+emitter.emit "config:initialized"

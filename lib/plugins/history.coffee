@@ -3,8 +3,8 @@ chalk = require("chalk")
 fs = require("fs")
 path = require("path")
 _ = require("lodash")
-cmds = require("./commands")
-util = require("./util")
+cmds = require("../commands")
+util = require("../util")
 
 {fatalError, infoMsg, programDone, runCommand, callCommand} = util
 colors = data = history = maxHistory = historyFile = undefined
@@ -14,7 +14,7 @@ colors = data = history = maxHistory = historyFile = undefined
 #
 
 saveHistory = () ->
-  util.saveJsonFile(data, historyFile)
+  util.saveJsonFile(historyFile, data)
 
 initHistoryObj = () ->
   return {
@@ -92,7 +92,7 @@ historyCommands =
         rl.prompt()
     rl.prompt()
 
-cmd.extend historyCommands
+cmds.extend historyCommands
 
 #
 # add commander commands

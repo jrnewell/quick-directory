@@ -3,18 +3,18 @@ chalk = require("chalk")
 fs = require("fs")
 path = require("path")
 _ = require("lodash")
-cmds = require("./commands")
-util = require("./util")
+cmds = require("../commands")
+util = require("../util")
 
 {fatalError, infoMsg, programDone, runCommand, callCommand} = util
-colors = data = schemes = schemesFile = scheme = currentScheme = undefined
+colors = data = schemes = schemesFile = scheme = currentScheme = autoCompact = undefined
 
 #
 # load schemes and configuation
 #
 
 saveSchemes = () ->
-  util.saveJsonFile(data, schemesFile)
+  util.saveJsonFile(schemesFile, data)
 
 initSchemesObj = () ->
   return {
@@ -185,7 +185,7 @@ schemeCommands =
     saveSchemes()
     programDone()
 
-cmd.extend schemeCommands
+cmds.extend schemeCommands
 
 #
 # add commander commands

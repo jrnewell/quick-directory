@@ -1,14 +1,19 @@
 chalk = require("chalk")
 mkdirp = require("mkdirp")
 fs = require("fs")
+path = require("path")
 EventEmitter = require('events').EventEmitter
+_ = require("lodash")
 cmds = require("./commands")
-config = require("./config")
 
 {commands} = cmds
-{loadConfig} = config
+loadConfig = undefined
 emitter = new EventEmitter()
 disableExit = false
+
+# to prevent circular require dependencies
+emitter.on "config:initialized", () ->
+  loadConfig = require("./config").loadConfig
 
 fatalError = (msg) ->
   console.error chalk.red(msg) if msg?
@@ -45,6 +50,15 @@ callCommand = (cmd) ->
   commands[cmd].apply(this, args)
   disableExit = false
 
+requireFiles = (dirPath, regex) ->
+  fullPath = path.resolve(dirPath)
+  if fs.existsSync(fullPath)
+    fs.readdirSync(fullPath).forEach (file) ->
+      return unless regex? and file.match(regex)
+      filename = path.join(fullPath, file)
+      stats = fs.statSync(filename)
+      require(filename) if stats.isFile()
+
 module.exports = {
   emitter: emitter
   fatalError: fatalError
@@ -55,4 +69,5 @@ module.exports = {
   ensureDirExists: ensureDirExists
   runCommand: runCommand
   callCommand: callCommand
+  requireFiles: requireFiles
 }
