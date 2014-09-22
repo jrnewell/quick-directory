@@ -108,6 +108,10 @@ commander
   .action(runHistoryCmd("addHistory"));
 
 commander
+  .command("list-hist")
+  .action(runHistoryCmd("listHistory"));
+
+commander
   .command("clear-hist")
   .action(runHistoryCmd("clearHistory"));
 

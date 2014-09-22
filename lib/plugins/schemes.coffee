@@ -85,11 +85,21 @@ schemeCommands =
     for scheme in _.keys(data.schemes)
       console.error chalk.gray scheme
 
-  dropScheme: (scheme) ->
-    fatalError "Scheme #{scheme} does not exist" unless _.isObject(data.schemes[scheme])
-    console.error "Droping scheme #{chalk.cyan scheme}"
-    delete data.schemes[scheme]
-    writeFileSync()
+  dropScheme: (_scheme) ->
+    _scheme ?= currentScheme
+    console.error "Droping scheme #{chalk.cyan _scheme}"
+    delete schemes[_scheme]
+    data.currentScheme = currentScheme = "default" if _scheme is currentScheme
+    saveSchemes()
+    programDone()
+
+  renameScheme: (name) ->
+    return if name is currentScheme
+    schemeMsg "renaming scheme #{currentScheme} to '#{name}'"
+    schemes[name] = scheme
+    delete schemes[currentScheme]
+    data.currentScheme = currentScheme = name
+    saveSchemes()
     programDone()
 
   listSlots: () ->
@@ -201,8 +211,12 @@ commander
   .action(runSchemesCommand("listSchemes"));
 
 commander
-  .command("drop")
+  .command("drop [name]")
   .action(runSchemesCommand("dropScheme"));
+
+commander
+  .command("rename")
+  .action(runSchemesCommand("renameScheme"));
 
 commander
   .command("list")
