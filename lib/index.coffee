@@ -16,6 +16,7 @@ defaultCommands =
 
   # eval "$(./app.js init)"
   init: () ->
+    cacheFile = path.join(config.getDataDir(), "bash_completions")
     console.log """
     function _qdwrap() {
       local cmd newPath
@@ -50,7 +51,11 @@ defaultCommands =
       cur="${COMP_WORDS[COMP_CWORD]}"
       prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-      opts=$(${job} _bash_complete)
+      if [[ -s "#{cacheFile}" ]]; then
+        opts=$(cat "#{cacheFile}")
+      else
+        opts=$(${job} _bash_complete)
+      fi
       COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
       return 0
     }
@@ -59,7 +64,9 @@ defaultCommands =
     programDone()
 
   _bash_complete: () ->
-    console.log (cmd._name for cmd in commander.commands when cmd._name isnt "*").join(" ")
+    str = (cmd._name for cmd in commander.commands when cmd._name isnt "*").join(" ")
+    console.log str
+    cacheCompletions str
     programDone()
 
   _cd: () ->
@@ -70,6 +77,11 @@ defaultCommands =
 
 cmds.extend defaultCommands
 
+cacheCompletions = (str) ->
+  cacheFile = path.join(config.getDataDir(), "bash_completions")
+  str ?= (cmd._name for cmd in commander.commands when cmd._name isnt "*").join(" ")
+  oldStr = (if fs.existsSync(cacheFile) then fs.readFileSync cacheFile, "utf8" else null)
+  fs.writeFileSync cacheFile, str, "utf8" if str != oldStr
 
 # check for private commands first (start with underscore)
 if process.argv.length == 3
