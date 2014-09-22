@@ -76,6 +76,21 @@ historyCommands =
       console.error "#{chalk.yellow idx}\t#{chalk.grey _path}"
     programDone()
 
+  getHistory: (idx, _commander) ->
+    unless idx.match /^[0-9]+$/
+      fatalError "history is empty" if _.isEmpty(history)
+      args = _commander.parent.rawArgs[3..]
+      console.log util.fuzzySearch args, history
+      programDone()
+    else
+      idx = parseInt(idx)
+      fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
+      fatalError "arugment <idx> should be less than #{history.length}" unless idx < history.length
+      _path = history[idx]
+      fatalError "path #{_path} is not a string" unless _.isString(_path)
+      console.log _path
+      programDone()
+
   pickHistory: () ->
     callCommand "listHistory"
     programDone() unless history.length > 0
@@ -108,12 +123,16 @@ commander
   .action(runHistoryCmd("addHistory"));
 
 commander
+  .command("clear-hist")
+  .action(runHistoryCmd("clearHistory"));
+
+commander
   .command("list-hist")
   .action(runHistoryCmd("listHistory"));
 
 commander
-  .command("clear-hist")
-  .action(runHistoryCmd("clearHistory"));
+  .command("get-hist <idx>")
+  .action(runHistoryCmd("getHistory"));
 
 commander
   .command("pick-hist")

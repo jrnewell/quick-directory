@@ -126,13 +126,19 @@ schemeCommands =
         rl.prompt()
     rl.prompt()
 
-  getSlot: (idx) ->
-    idx = parseInt(idx)
-    fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
-    _path = scheme.slots[idx]
-    fatalError "path #{_path} is not a string" unless _.isString(_path)
-    console.log _path
-    programDone()
+  getSlot: (idx, _commander) ->
+    unless idx.match /^[0-9]+$/
+      fatalError "#{currentScheme} scheme is empty" if _.isEmpty(scheme.slots)
+      args = _commander.parent.rawArgs[3..]
+      console.log util.fuzzySearch args, scheme.slots
+      programDone()
+    else
+      idx = parseInt(idx)
+      fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
+      _path = scheme.slots[idx]
+      fatalError "path #{_path} is not a string" unless _.isString(_path)
+      console.log _path
+      programDone()
 
   removeSlot: (idx) ->
     idx = parseInt(idx)
