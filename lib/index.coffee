@@ -28,13 +28,18 @@ defaultCommands =
       fi
     }
     function q() {
-      _qdwrap get $1
+      shift
+      _qdwrap get "$@"
     }
     function qq() {
       _qdwrap pick
     }
+    function h() {
+      shift
+      _qdwrap get-hist "$@"
+    }
     function hh() {
-      _qdwrap pick-hist $1
+      _qdwrap pick-hist
     }
     function cd()
     {
