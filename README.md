@@ -1,6 +1,6 @@
 # Quick Directory
 
-A productivity utility to quick change directories.
+A productivity utility to quickly change directories.
 
 ## Installation
 
