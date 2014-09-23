@@ -18,34 +18,37 @@ initStr = (cacheFile) ->
     local cmd newPath
     cmd="$1"
     shift
-    newPath=$(/Users/james/node.js/quick-directory/app.js "$cmd" "$@")
+    newPath=$(qd "$cmd" "$@")
     if [ $? -eq 0 ]; then
       cd "$newPath"
     fi
   }
   function q() {
-    shift
     _qdwrap get "$@"
   }
   function qs() {
-    shift
     _qdwrap set "$@"
   }
   function qq() {
     _qdwrap pick
   }
+  function ql() {
+    _qdwrap list
+  }
   function h() {
-    shift
     _qdwrap get-hist "$@"
   }
   function hh() {
     _qdwrap pick-hist
   }
+  function hl() {
+    _qdwrap list-hist
+  }
   function cd()
   {
     builtin cd "$@"
     if [[ $? -eq 0 ]]; then
-      (/Users/james/node.js/quick-directory/app.js _cd &)
+      (qd _cd &)
     fi
   }
   _qd_completion()
@@ -64,7 +67,7 @@ initStr = (cacheFile) ->
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0
   }
-  complete -o nospace -F _qd_completion /Users/james/node.js/quick-directory/app.js
+  complete -o nospace -F _qd_completion qd
   """
 
 defaultCommands =
