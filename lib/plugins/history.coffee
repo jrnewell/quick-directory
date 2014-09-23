@@ -119,21 +119,21 @@ util.emitter.on "cd:path", (_path) ->
 #
 
 commander
-  .command("add-hist")
+  .command("hist-add")
   .action(runHistoryCmd("addHistory"));
 
 commander
-  .command("clear-hist")
+  .command("hist-clear")
   .action(runHistoryCmd("clearHistory"));
 
 commander
-  .command("list-hist")
+  .command("hist-list")
   .action(runHistoryCmd("listHistory"));
 
 commander
-  .command("get-hist <idx>")
+  .command("hist-get <idx>")
   .action(runHistoryCmd("getHistory"));
 
 commander
-  .command("pick-hist")
+  .command("hist-pick")
   .action(runHistoryCmd("pickHistory"));

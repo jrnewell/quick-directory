@@ -36,13 +36,13 @@ initStr = (cacheFile) ->
     _qdwrap list
   }
   function h() {
-    _qdwrap get-hist "$@"
+    _qdwrap hist-get "$@"
   }
   function hh() {
-    _qdwrap pick-hist
+    _qdwrap hist-pick
   }
   function hl() {
-    _qdwrap list-hist
+    _qdwrap hist-list
   }
   function cd()
   {
