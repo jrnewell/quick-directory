@@ -9,12 +9,16 @@
     "type": "git",
     "url": "git://github.com/jrnewell/quick-directory.git"
   },
+  "scripts": {
+    "build":        "coffee --compile --output lib src",
+    "prepublish":   "coffee --compile --output lib src",
+    "postpublish":  "rm -rf lib"
+  },
   "dependencies" : {
     "commander": "latest",
     "chalk": "latest",
     "jsonfile": "latest",
     "lodash": "latest",
-    "coffee-script": "latest",
     "mkdirp": "latest"
   },
   "keywords": [
