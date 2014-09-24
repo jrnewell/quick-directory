@@ -1,5 +1,4 @@
 commander = require("commander")
-# chalk = require("chalk")
 fs = require("fs")
 path = require("path")
 _ = require("lodash")
@@ -10,39 +9,41 @@ cmds = require("./commands")
 {runCommand, emitter, programDone} = util
 
 # load plugins
-util.requireFiles path.join(__dirname, "plugins"), /(\.coffee|\.js)$/
+plugins = util.requireFiles path.join(__dirname, "plugins"), /(\.coffee|\.js)$/
 
 initStr = (cacheFile) ->
   return """
-  function _qdwrap() {
+  function _cdwrap() {
     local cmd newPath
+    app="$1"
+    shift
     cmd="$1"
     shift
-    newPath=$(qd "$cmd" "$@")
+    newPath=$("$app" "$cmd" "$@")
     if [ $? -eq 0 ]; then
       cd "$newPath"
     fi
   }
   function q() {
-    _qdwrap get "$@"
+    _cdwrap qd get "$@"
   }
   function qs() {
-    _qdwrap set "$@"
+    _cdwrap qd set "$@"
   }
   function qq() {
-    _qdwrap pick
+    _cdwrap qd pick
   }
   function ql() {
-    _qdwrap list
+    _cdwrap qd list
   }
   function h() {
-    _qdwrap hist-get "$@"
+    _cdwrap hd get "$@"
   }
   function hh() {
-    _qdwrap hist-pick
+    _cdwrap hd pick
   }
   function hl() {
-    _qdwrap hist-list
+    _cdwrap hd list
   }
   function cd()
   {
@@ -59,8 +60,8 @@ initStr = (cacheFile) ->
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    if [[ -s "#{cacheFile}" ]]; then
-      opts=$(cat "#{cacheFile}")
+    if [[ -s "#{cacheFile}_${job}" ]]; then
+      opts=$(cat "#{cacheFile}_${job}")
     else
       opts=$(${job} _bash_complete)
     fi
@@ -68,6 +69,7 @@ initStr = (cacheFile) ->
     return 0
   }
   complete -o nospace -F _qd_completion qd
+  complete -o nospace -F _qd_completion hd
   """
 
 defaultCommands =
@@ -99,28 +101,34 @@ defaultCommands =
 cmds.extend defaultCommands
 
 cacheCompletions = (str) ->
-  cacheFile = path.join(config.getDataDir(), "bash_completions")
+  cmd = process.argv[1]
+  cacheFile = path.join(config.getDataDir(), "bash_completions_#{path.basename(cmd, path.extname(cmd))}")
   str ?= (cmd._name for cmd in commander.commands when cmd._name isnt "*").join(" ")
   oldStr = (if fs.existsSync(cacheFile) then fs.readFileSync cacheFile, "utf8" else null)
   fs.writeFileSync cacheFile, str, "utf8" if str != oldStr
 
-# check for private commands first (start with underscore)
-if process.argv.length == 3
-  privateCmds = (cmd for cmd in _.keys(cmds.commands) when cmd.match /^_\w+$/)
-  cmd = process.argv[2]
-  for privateCmd in privateCmds
-    do runCommand(cmd) if cmd is privateCmd
+module.exports.load = (_plugin) ->
+  # load plugin commands
+  plugin = plugins[_plugin]
+  plugin.load() if plugin?
 
-commander
-  .version(require("../package.json").version)
+  # check for private commands first (start with underscore)
+  if process.argv.length == 3
+    privateCmds = (cmd for cmd in _.keys(cmds.commands) when cmd.match /^_\w+$/)
+    cmd = process.argv[2]
+    for privateCmd in privateCmds
+      do runCommand(cmd) if cmd is privateCmd
 
-commander
-  .command("init [cache]")
-  .action(runCommand("init"));
+  commander
+    .version(require("../package.json").version)
 
-commander
-  .command("*")
-  .description("output usage information")
-  .action(commander.help)
+  commander
+    .command("init [cache]")
+    .action(runCommand("init"));
 
-commander.parse(process.argv);
+  commander
+    .command("*")
+    .description("output usage information")
+    .action(commander.help)
+
+  commander.parse(process.argv);

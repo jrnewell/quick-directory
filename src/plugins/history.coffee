@@ -115,25 +115,25 @@ util.emitter.on "cd:path", (_path) ->
   historyCommands.addHistory(_path)
 
 #
-# add commander commands
+# load history commands into commander
 #
+module.exports.load = () ->
+  commander
+    .command("add")
+    .action(runHistoryCmd("addHistory"))
 
-commander
-  .command("hist-add")
-  .action(runHistoryCmd("addHistory"));
+  commander
+    .command("clear")
+    .action(runHistoryCmd("clearHistory"))
 
-commander
-  .command("hist-clear")
-  .action(runHistoryCmd("clearHistory"));
+  commander
+    .command("list")
+    .action(runHistoryCmd("listHistory"))
 
-commander
-  .command("hist-list")
-  .action(runHistoryCmd("listHistory"));
+  commander
+    .command("get <idx>")
+    .action(runHistoryCmd("getHistory"))
 
-commander
-  .command("hist-get <idx>")
-  .action(runHistoryCmd("getHistory"));
-
-commander
-  .command("hist-pick")
-  .action(runHistoryCmd("pickHistory"));
+  commander
+    .command("pick")
+    .action(runHistoryCmd("pickHistory"))

@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "A productivity utility to quickly change directories",
   "bin": {
-    "qd": "./app.js"
+    "qd": "./qd.js",
+    "hd": "./hd.js"
   },
   "repository": {
     "type": "git",
@@ -13,7 +14,7 @@
     "build":       "coffee --compile --output lib src",
     "clean":       "rm -rf lib",
     "prepublish":  "coffee --compile --output lib src",
-    "postpublish": "rm -rf lib",
+    "postpublish": "rm -rf lib"
   },
   "dependencies" : {
     "commander": "latest",

@@ -204,54 +204,54 @@ schemeCommands =
 cmds.extend schemeCommands
 
 #
-# add commander commands
+# load scheme commands into commander
 #
+module.exports.load = () ->
+  commander
+    .command("scheme [name]")
+    .description("changes schemes (prints current scheme if no name is given)")
+    .action(runSchemesCommand("changeScheme"))
 
-commander
-  .command("scheme [name]")
-  .description("changes schemes (prints current scheme if no name is given)")
-  .action(runSchemesCommand("changeScheme"));
+  commander
+    .command("schemes")
+    .action(runSchemesCommand("listSchemes"))
 
-commander
-  .command("schemes")
-  .action(runSchemesCommand("listSchemes"));
+  commander
+    .command("drop [name]")
+    .action(runSchemesCommand("dropScheme"))
 
-commander
-  .command("drop [name]")
-  .action(runSchemesCommand("dropScheme"));
+  commander
+    .command("rename")
+    .action(runSchemesCommand("renameScheme"))
 
-commander
-  .command("rename")
-  .action(runSchemesCommand("renameScheme"));
+  commander
+    .command("list")
+    .action(runSchemesCommand("listSlots"))
 
-commander
-  .command("list")
-  .action(runSchemesCommand("listSlots"));
+  commander
+    .command("pick")
+    .action(runSchemesCommand("pickSlot"))
 
-commander
-  .command("pick")
-  .action(runSchemesCommand("pickSlot"));
+  commander
+    .command("get <idx>")
+    .action(runSchemesCommand("getSlot"))
 
-commander
-  .command("get <idx>")
-  .action(runSchemesCommand("getSlot"));
+  commander
+    .command("rm [idx]")
+    .action(runSchemesCommand("removeSlot"))
 
-commander
-  .command("rm [idx]")
-  .action(runSchemesCommand("removeSlot"));
+  commander
+    .command("switch <idx1> <idx2>")
+    .action(runSchemesCommand("switchSlots"))
 
-commander
-  .command("switch <idx1> <idx2>")
-  .action(runSchemesCommand("switchSlots"));
+  commander
+    .command("set [idx] [path]")
+    .action(runSchemesCommand("saveSlot"))
 
-commander
-  .command("set [idx] [path]")
-  .action(runSchemesCommand("saveSlot"));
+  commander
+    .command("clear")
+    .action(runSchemesCommand("clearSlots"))
 
-commander
-  .command("clear")
-  .action(runSchemesCommand("clearSlots"));
-
-commander
-  .command("compact")
-  .action(runSchemesCommand("compactSlots"));
+  commander
+    .command("compact")
+    .action(runSchemesCommand("compactSlots"))

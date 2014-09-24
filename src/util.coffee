@@ -53,11 +53,14 @@ callCommand = (cmd) ->
 requireFiles = (dirPath, regex) ->
   fullPath = path.resolve(dirPath)
   if fs.existsSync(fullPath)
+    results = {}
     fs.readdirSync(fullPath).forEach (file) ->
       return unless regex? and file.match(regex)
       filename = path.join(fullPath, file)
       stats = fs.statSync(filename)
-      require(filename) if stats.isFile()
+      result = require(filename) if stats.isFile()
+      results[path.basename(file, path.extname(file))] = result
+    return results
 
 fuzzySearch = (str, slots) ->
   slots = _.values(slots) if _.isObject(slots)
