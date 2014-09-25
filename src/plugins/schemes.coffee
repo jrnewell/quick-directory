@@ -58,6 +58,11 @@ doAutoCompact = () ->
   schemeMsg "auto compacting is enabled"
   callCommand "compactSlots"
 
+getPathDuplicate = (_path) ->
+  for idx, schemePath of scheme.slots
+    return idx if path.resolve(schemePath) is path.resolve(_path)
+  return null
+
 runSchemesCommand = (cmd) ->
   runCommand(cmd, loadSchemes)
 
@@ -172,10 +177,37 @@ schemeCommands =
 
     _path = process.cwd() unless _.isString(_path)
     fatalError "path #{_path} does not exist" unless fs.existsSync _path
+    dup = getPathDuplicate _path
+    fatalError "path #{_path} already exists in slot #{dup}" if dup
     scheme.slots[idx] = _path
     doAutoCompact() if autoCompact and idx > scheme.next
     scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
-    schemeMsg "saving slot #{chalk.yellow idx} as #{chalk.grey _path}"
+    schemeMsg "#{chalk.green 'saving'} slot #{chalk.yellow idx} as #{chalk.grey _path}"
+    saveSchemes()
+    programDone()
+
+  # TODO: check for dups
+  saveSlotsRecurse: (_path) ->
+    _path = process.cwd() unless _.isString(_path)
+    fatalError "path #{_path} does not exist" unless fs.existsSync _path
+    # TODO: check for too many sub directories
+    paths = [_path]
+    fs.readdirSync(_path).forEach (dir) ->
+      fullPath = path.join(_path, dir)
+      stats = fs.statSync(fullPath)
+      paths.push(fullPath) if stats.isDirectory()
+    next = scheme.next
+    for dir in paths
+      dup = getPathDuplicate dir
+      if dup
+        schemeMsg "skipping #{chalk.grey dir}, already in slot #{chalk.yellow dup}"
+      else
+        schemeMsg "#{chalk.green 'saving'} slot #{chalk.yellow next} as #{chalk.grey dir}"
+        scheme.slots[next] = dir
+        next += 1
+    doAutoCompact() if autoCompact
+    scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
+    schemeMsg chalk.green "saved #{paths.length} directories"
     saveSchemes()
     programDone()
 
@@ -247,6 +279,10 @@ module.exports.load = () ->
   commander
     .command("set [idx] [path]")
     .action(runSchemesCommand("saveSlot"))
+
+  commander
+    .command("setr [path]")
+    .action(runSchemesCommand("saveSlotsRecurse"))
 
   commander
     .command("clear")
