@@ -68,7 +68,7 @@ runSchemesCommand = (cmd) ->
 
 schemeCommands =
   printCurrentScheme: () ->
-    console.error currentScheme
+    console.error "the current scheme is #{chalk.cyan currentScheme}"
     programDone()
 
   changeScheme: (name) ->
@@ -246,48 +246,60 @@ module.exports.load = () ->
 
   commander
     .command("schemes")
+    .description("lists all available schemes")
     .action(runSchemesCommand("listSchemes"))
 
   commander
     .command("drop [name]")
+    .description("drops a scheme (current scheme is used if no name is given)")
     .action(runSchemesCommand("dropScheme"))
 
   commander
-    .command("rename")
+    .command("rename <name>")
+    .description("renames current scheme to <name>")
     .action(runSchemesCommand("renameScheme"))
 
   commander
     .command("list")
+    .description("lists all slots for current scheme")
     .action(runSchemesCommand("listSlots"))
 
   commander
     .command("pick")
+    .description("brings up a menu to choose a slot interactively")
     .action(runSchemesCommand("pickSlot"))
 
   commander
     .command("get <idx>")
+    .description("change to slot <idx> (you can also give text for a fuzzy search)")
     .action(runSchemesCommand("getSlot"))
 
   commander
     .command("rm [idx]")
+    .description("remove slot <idx>")
     .action(runSchemesCommand("removeSlot"))
 
   commander
     .command("switch <idx1> <idx2>")
+    .description("switch the two slot numbers")
     .action(runSchemesCommand("switchSlots"))
 
   commander
     .command("set [idx] [path]")
+    .description("set slot [idx] to [path] (cwd is used if no path is given) (next highest slot number is used if no idx is given)")
     .action(runSchemesCommand("saveSlot"))
 
   commander
     .command("setr [path]")
+    .description("recursively set all the slots to the next highest slot numbers (cwd is used if no path is given)")
     .action(runSchemesCommand("saveSlotsRecurse"))
 
   commander
     .command("clear")
+    .description("remove all slots from current scheme")
     .action(runSchemesCommand("clearSlots"))
 
   commander
     .command("compact")
+    .description("reorder all slot numbers so there are no gaps")
     .action(runSchemesCommand("compactSlots"))

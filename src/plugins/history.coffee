@@ -120,20 +120,25 @@ util.emitter.on "cd:path", (_path) ->
 module.exports.load = () ->
   commander
     .command("add")
+    .description("add entry to history (should be automatically called on cd)")
     .action(runHistoryCmd("addHistory"))
 
   commander
     .command("clear")
+    .description("clear history")
     .action(runHistoryCmd("clearHistory"))
 
   commander
     .command("list")
+    .description("list history")
     .action(runHistoryCmd("listHistory"))
 
   commander
     .command("get <idx>")
+    .description("change to a history item <idx> (you can also give text for a fuzzy search)")
     .action(runHistoryCmd("getHistory"))
 
   commander
     .command("pick")
+    .description("brings up a menu to choose a history item interactively")
     .action(runHistoryCmd("pickHistory"))
