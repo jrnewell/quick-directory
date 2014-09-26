@@ -6,8 +6,8 @@ _ = require("lodash")
 cmds = require("../commands")
 util = require("../util")
 
-{fatalError, infoMsg, programDone, runCommand, callCommand} = util
-colors = data = schemes = schemesFile = scheme = currentScheme = autoCompact = undefined
+{fatalError, infoMsg, programDone, runCommand, callCommand, confirmPrompt} = util
+colors = data = schemes = schemesFile = scheme = currentScheme = autoCompact = recurseWarn = undefined
 
 #
 # load schemes and configuation
@@ -20,6 +20,7 @@ initSchemesObj = () ->
   return {
     currentScheme: "default"
     autoCompact: true
+    recurseWarn: 10
     schemes: {
       default:
         next: 0
@@ -35,7 +36,7 @@ initalizeScheme = (scheme) ->
 
 loadSchemes = () ->
   data = util.loadJsonFile(schemesFile, initSchemesObj)
-  {currentScheme, autoCompact, schemes} = data
+  {currentScheme, autoCompact, recurseWarn, schemes} = data
   scheme = schemes[currentScheme]
   return if _.isObject(scheme)
   console.error chalk.yellow "currentScheme is missing from schemes.json, setting to 'default' scheme"
@@ -186,7 +187,6 @@ schemeCommands =
     saveSchemes()
     programDone()
 
-  # TODO: check for dups
   saveSlotsRecurse: (_path) ->
     _path = process.cwd() unless _.isString(_path)
     fatalError "path #{_path} does not exist" unless fs.existsSync _path
@@ -196,20 +196,29 @@ schemeCommands =
       fullPath = path.join(_path, dir)
       stats = fs.statSync(fullPath)
       paths.push(fullPath) if stats.isDirectory()
-    next = scheme.next
-    for dir in paths
-      dup = getPathDuplicate dir
-      if dup
-        schemeMsg "skipping #{chalk.grey dir}, already in slot #{chalk.yellow dup}"
-      else
-        schemeMsg "#{chalk.green 'saving'} slot #{chalk.yellow next} as #{chalk.grey dir}"
-        scheme.slots[next] = dir
-        next += 1
-    doAutoCompact() if autoCompact
-    scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
-    schemeMsg chalk.green "saved #{paths.length} directories"
-    saveSchemes()
-    programDone()
+
+    if (path.length > recurseWarn)
+      confirmPrompt "This will save #{path.length} slots in the current scheme, are you sure?", (err, confirm) ->
+        return fatalError if err
+        saveSlots() if confirm
+    else
+      saveSlots()
+
+    saveSlots = () ->
+      next = scheme.next
+      for dir in paths
+        dup = getPathDuplicate dir
+        if dup
+          schemeMsg "skipping #{chalk.grey dir}, already in slot #{chalk.yellow dup}"
+        else
+          schemeMsg "#{chalk.green 'saving'} slot #{chalk.yellow next} as #{chalk.grey dir}"
+          scheme.slots[next] = dir
+          next += 1
+      doAutoCompact() if autoCompact
+      scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
+      schemeMsg chalk.green "saved #{paths.length} directories"
+      saveSchemes()
+      programDone()
 
   clearSlots: () ->
     schemeMsg chalk.yellow "clearing all slots"

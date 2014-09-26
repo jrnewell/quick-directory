@@ -1,8 +1,9 @@
 chalk = require("chalk")
 mkdirp = require("mkdirp")
+prompt = require("prompt")
 fs = require("fs")
 path = require("path")
-EventEmitter = require('events').EventEmitter
+EventEmitter = require("events").EventEmitter
 _ = require("lodash")
 cmds = require("./commands")
 
@@ -94,9 +95,6 @@ fuzzySearch = (str, slots) ->
         else
           1
 
-      #console.dir result
-      #console.log "point: #{point}, prev: #{prev}"
-
       score += point + (result.x / 100)
       prev = result.tokenNum
 
@@ -104,9 +102,20 @@ fuzzySearch = (str, slots) ->
       slot: slot
       score: score
 
-  #console.dir scores
-
   return _.max(scores, "score").slot
+
+confirmPrompt = (message, callback) ->
+  promptConfig =
+    name: "yesno"
+    message: (message || "are you sure?")
+    validator: /y[es]*|n[o]?/
+    warning: "Must respond yes or no"
+    default: "no"
+
+  prompt.get promptConfig, (err, results) ->
+    return callback(err) if err
+    confirm = (results.yesno and (results.yesno is "yes" or results.yesno is "y"))
+    return callback(null, confirm)
 
 module.exports = {
   emitter: emitter
@@ -120,4 +129,5 @@ module.exports = {
   callCommand: callCommand
   requireFiles: requireFiles
   fuzzySearch: fuzzySearch
+  confirmPrompt: confirmPrompt
 }

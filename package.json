@@ -21,7 +21,8 @@
     "chalk": "latest",
     "jsonfile": "latest",
     "lodash": "latest",
-    "mkdirp": "latest"
+    "mkdirp": "latest",
+    "prompt": "latest"
   },
   "keywords": [
     "quick", "directory", "quick directory", "utility", "working", "working directory", "productivity"
