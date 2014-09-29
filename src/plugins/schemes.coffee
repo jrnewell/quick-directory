@@ -109,6 +109,7 @@ schemeCommands =
     programDone()
 
   listSlots: () ->
+    return schemeMsg "no slots in scheme" unless scheme.slots.length > 0
     schemeMsg "listing slots"
     console.error "------------------------------"
     slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
@@ -136,31 +137,36 @@ schemeCommands =
     unless idx.match /^[0-9]+$/
       fatalError "#{currentScheme} scheme is empty" if _.isEmpty(scheme.slots)
       args = _commander.parent.rawArgs[3..]
-      console.log util.fuzzySearch args, scheme.slots
+      _path = util.fuzzySearch args, scheme.slots
+      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
+      console.log _path
       programDone()
     else
       idx = parseInt(idx)
       fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
       _path = scheme.slots[idx]
       fatalError "path #{_path} is not a string" unless _.isString(_path)
+      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
       console.log _path
       programDone()
 
   removeSlot: (idx) ->
     idx = parseInt(idx)
     fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0
+    schemeMsg "#{chalk.red 'removing'} path #{scheme.slots[idx]} in slot #{chalk.yellow idx}"
     delete scheme.slots[idx]
     doAutoCompact() if autoCompact
     saveSchemes()
     programDone()
 
-  switchSlots: (idx1, idx2) ->
+  swapSlots: (idx1, idx2) ->
     idx1 = parseInt(idx1)
     fatalError "argument <idx1> should be a whole number" unless _.isNumber(idx1) and not _.isNaN(idx1) and idx1 >= 0
     idx2 = parseInt(idx2)
     fatalError "argument <idx2> should be a whole number" unless _.isNumber(idx2) and not _.isNaN(idx2) and idx2 >= 0
     fatalError "argument <idx1> is not valid" unless _.isString(scheme.slots[idx1])
     fatalError "argument <idx2> is not valid" unless _.isString(scheme.slots[idx2])
+    schemeMsg "#{chalk.green 'swapping'} slots #{chalk.yellow idx1} and #{chalk.yellow idx2}"
     temp = scheme.slots[idx1]
     scheme.slots[idx1] = scheme.slots[idx2]
     scheme.slots[idx2] = temp
@@ -197,13 +203,6 @@ schemeCommands =
       stats = fs.statSync(fullPath)
       paths.push(fullPath) if stats.isDirectory()
 
-    if (path.length > recurseWarn)
-      confirmPrompt "This will save #{path.length} slots in the current scheme, are you sure?", (err, confirm) ->
-        return fatalError if err
-        saveSlots() if confirm
-    else
-      saveSlots()
-
     saveSlots = () ->
       next = scheme.next
       for dir in paths
@@ -219,6 +218,13 @@ schemeCommands =
       schemeMsg chalk.green "saved #{paths.length} directories"
       saveSchemes()
       programDone()
+
+    if (paths.length > recurseWarn)
+      confirmPrompt "This will save #{paths.length} slots into the current scheme, are you sure?", (err, confirm) ->
+        return fatalError if err
+        saveSlots() if confirm
+    else
+      saveSlots()
 
   clearSlots: () ->
     schemeMsg chalk.yellow "clearing all slots"
@@ -280,6 +286,7 @@ module.exports.load = () ->
 
   commander
     .command("get <idx>")
+    .alias("go")
     .description("change to slot <idx> (you can also give text for a fuzzy search)")
     .action(runSchemesCommand("getSlot"))
 
@@ -289,9 +296,9 @@ module.exports.load = () ->
     .action(runSchemesCommand("removeSlot"))
 
   commander
-    .command("switch <idx1> <idx2>")
-    .description("switch the two slot numbers")
-    .action(runSchemesCommand("switchSlots"))
+    .command("swap <idx1> <idx2>")
+    .description("swap the two slot numbers")
+    .action(runSchemesCommand("swapSlots"))
 
   commander
     .command("set [idx] [path]")

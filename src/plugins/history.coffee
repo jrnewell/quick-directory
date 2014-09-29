@@ -51,6 +51,7 @@ historyCommands =
     fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0 and idx < history.length
     _path = history[idx]
     fatalError "path #{_path} is not a string" unless _.isString(_path)
+    schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
     console.log _path
     programDone()
 
@@ -70,6 +71,7 @@ historyCommands =
     programDone()
 
   listHistory: () ->
+    return schemeMsg "no slots in history" unless scheme.slots.length > 0
     histMsg "listing slots", "history"
     console.error "------------------------------"
     for _path, idx in history
@@ -80,7 +82,9 @@ historyCommands =
     unless idx.match /^[0-9]+$/
       fatalError "history is empty" if _.isEmpty(history)
       args = _commander.parent.rawArgs[3..]
-      console.log util.fuzzySearch args, history
+      _path = util.fuzzySearch args, history
+      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
+      console.log _path
       programDone()
     else
       idx = parseInt(idx)
@@ -88,6 +92,7 @@ historyCommands =
       fatalError "arugment <idx> should be less than #{history.length}" unless idx < history.length
       _path = history[idx]
       fatalError "path #{_path} is not a string" unless _.isString(_path)
+      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
       console.log _path
       programDone()
 
@@ -135,6 +140,7 @@ module.exports.load = () ->
 
   commander
     .command("get <idx>")
+    .alias("go")
     .description("change to a history item <idx> (you can also give text for a fuzzy search)")
     .action(runHistoryCmd("getHistory"))
 
