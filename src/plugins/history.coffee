@@ -6,7 +6,7 @@ _ = require("lodash")
 cmds = require("../commands")
 util = require("../util")
 
-{fatalError, infoMsg, programDone, runCommand, callCommand} = util
+{vLog, fatalError, infoMsg, programDone, runCommand, callCommand} = util
 colors = data = history = maxHistory = historyFile = undefined
 
 #
@@ -65,7 +65,7 @@ historyCommands =
     programDone()
 
   clearHistory: () ->
-    console.error chalk.yellow "clearing history"
+    vLog chalk.yellow "clearing history"
     data.slots = history = []
     saveHistory()
     programDone()
@@ -73,7 +73,7 @@ historyCommands =
   listHistory: () ->
     return histMsg "no slots in history" unless history.length > 0
     histMsg "listing slots", "history"
-    console.error "------------------------------"
+    vLog "------------------------------"
     for _path, idx in history
       console.error "#{chalk.yellow idx}\t#{chalk.grey _path}"
     programDone()

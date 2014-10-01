@@ -5,6 +5,7 @@ fs = require("fs")
 path = require("path")
 EventEmitter = require("events").EventEmitter
 _ = require("lodash")
+commander = require("commander")
 cmds = require("./commands")
 
 {commands} = cmds
@@ -16,6 +17,9 @@ disableExit = false
 emitter.on "config:initialized", () ->
   loadConfig = require("./config").loadConfig
 
+vLog = (msg) ->
+  console.error msg unless commander.quiet
+
 fatalError = (msg) ->
   console.error chalk.red(msg) if msg?
   process.exit(1)
@@ -24,7 +28,7 @@ programDone = () ->
   process.exit 0 unless disableExit
 
 infoMsg = (header, msg) ->
-  console.error chalk.cyan("[ #{header} ]") + " - #{msg}"
+  vLog chalk.cyan("[ #{header} ]") + " - #{msg}"
 
 saveJsonFile = (fileName, obj) ->
   fs.writeFileSync(fileName, JSON.stringify(obj), "utf8")
@@ -121,6 +125,7 @@ optionToBool = (val) ->
 
 module.exports = {
   emitter: emitter
+  vLog: vLog
   fatalError: fatalError
   programDone: programDone
   infoMsg: infoMsg

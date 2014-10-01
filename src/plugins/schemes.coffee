@@ -6,7 +6,7 @@ _ = require("lodash")
 cmds = require("../commands")
 util = require("../util")
 
-{fatalError, infoMsg, programDone, ensureDirExists, runCommand, callCommand, confirmPrompt} = util
+{vLog, fatalError, infoMsg, programDone, ensureDirExists, runCommand, callCommand, confirmPrompt} = util
 colors = schemeDir = schemes = dataFile = data = schemeFile =
   scheme = currentScheme = autoCompact = recurseWarn = undefined
 
@@ -44,6 +44,10 @@ loadSchemes = () ->
 
   schemeFile = path.join(schemeDir, "#{currentScheme}.json")
   scheme = util.loadJsonFile(schemeFile, initSchemeObj)
+  return if _.isObject(scheme.slots)
+  console.error chalk.yellow "slots is missing from #{currentScheme}.json, resetting slots"
+  scheme = initSchemeObj()
+  saveCurrentScheme()
 
 util.emitter.on "config:loaded", (config, dataDir) ->
   schemeDir = path.join(dataDir, "schemes")
@@ -71,7 +75,7 @@ runSchemesCommand = (cmd) ->
 
 schemeCommands =
   printCurrentScheme: () ->
-    console.error "the current scheme is #{chalk.cyan currentScheme}"
+    vLog "the current scheme is #{chalk.cyan currentScheme}"
     programDone()
 
   changeScheme: (name) ->
@@ -79,19 +83,19 @@ schemeCommands =
     programDone() if name is currentScheme
 
     data.currentScheme = currentScheme = name
-    console.error "changing scheme to #{chalk.cyan name}"
+    vLog "changing scheme to #{chalk.cyan name}"
     saveSchemeConfig()
     programDone()
 
   listSchemes: () ->
-    console.error "listing schemes"
-    console.error "------------------------------"
+    vLog "listing schemes"
+    vLog "------------------------------"
     for scheme in schemes
       console.error chalk.gray scheme
 
   dropScheme: (_scheme) ->
     _scheme ?= currentScheme
-    console.error "Droping scheme #{chalk.cyan _scheme}"
+    vLog "Droping scheme #{chalk.cyan _scheme}"
     data.schemes = schemes = _.without(schemes, currentScheme)
     data.currentScheme = currentScheme = "default" if _scheme is currentScheme
     saveSchemeConfig()
@@ -114,7 +118,7 @@ schemeCommands =
   listSlots: () ->
     return schemeMsg "no slots in scheme" if _.isEmpty(scheme.slots)
     schemeMsg "listing slots"
-    console.error "------------------------------"
+    vLog "------------------------------"
     slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
     for pair in slots
       console.error "#{chalk.yellow pair[0]}\t#{chalk.grey pair[1]}"
