@@ -51,7 +51,7 @@ historyCommands =
     fatalError "argument <idx> should be a whole number" unless _.isNumber(idx) and not _.isNaN(idx) and idx >= 0 and idx < history.length
     _path = history[idx]
     fatalError "path #{_path} is not a string" unless _.isString(_path)
-    schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
+    histMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
     console.log _path
     programDone()
 
@@ -83,7 +83,7 @@ historyCommands =
       fatalError "history is empty" if _.isEmpty(history)
       args = _commander.parent.rawArgs[3..]
       _path = util.fuzzySearch args, history
-      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
+      histMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
       console.log _path
       programDone()
     else
@@ -92,7 +92,7 @@ historyCommands =
       fatalError "arugment <idx> should be less than #{history.length}" unless idx < history.length
       _path = history[idx]
       fatalError "path #{_path} is not a string" unless _.isString(_path)
-      schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
+      histMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
       console.log _path
       programDone()
 
