@@ -154,6 +154,12 @@ $ hl
 
 ```
 
+## Coming Soon
+
+* Frecency or Top Mode
+* Better interactive menu with fuzzy search
+* Better support for other platforms
+
 ## License
 
 [MIT License](http://en.wikipedia.org/wiki/MIT_License)
