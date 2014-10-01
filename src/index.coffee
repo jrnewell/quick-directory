@@ -8,7 +8,7 @@ cmds = require("./commands")
 
 {runCommand, emitter, programDone} = util
 
-# load plugins
+# source plugin files
 plugins = util.requireFiles path.join(__dirname, "plugins"), /(\.coffee|\.js)$/
 
 initStr = (cacheFile) ->
@@ -124,6 +124,7 @@ module.exports.load = (_plugin) ->
 
   commander
     .command("init [cache]")
+    .description("initalize your shell with aliases and functions")
     .action(runCommand("init"));
 
   commander

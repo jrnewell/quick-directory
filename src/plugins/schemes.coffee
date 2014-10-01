@@ -307,12 +307,12 @@ module.exports.load = () ->
 
   commander
     .command("setr [path]")
-    .description("recursively set all the slots to the next highest slot numbers (cwd is used if no path is given)")
+    .description("recursively set all the slots to child directories using the next highest slot numbers (cwd is used if no path is given)")
     .action(runSchemesCommand("saveSlotsRecurse"))
 
   commander
     .command("clear")
-    .description("remove all slots from current scheme")
+    .description("remove all slots from the current scheme")
     .action(runSchemesCommand("clearSlots"))
 
   commander
