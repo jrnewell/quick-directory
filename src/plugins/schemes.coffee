@@ -6,46 +6,48 @@ _ = require("lodash")
 cmds = require("../commands")
 util = require("../util")
 
-{fatalError, infoMsg, programDone, runCommand, callCommand, confirmPrompt} = util
-colors = data = schemes = schemesFile = scheme = currentScheme = autoCompact = recurseWarn = undefined
+{fatalError, infoMsg, programDone, ensureDirExists, runCommand, callCommand, confirmPrompt} = util
+colors = schemeDir = schemes = dataFile = data = schemeFile =
+  scheme = currentScheme = autoCompact = recurseWarn = undefined
 
 #
 # load schemes and configuation
 #
 
-saveSchemes = () ->
-  util.saveJsonFile(schemesFile, data)
+saveSchemeConfig = () ->
+  util.saveJsonFile(dataFile, data)
 
-initSchemesObj = () ->
+saveCurrentScheme = () ->
+  util.saveJsonFile(schemeFile, scheme)
+
+initConfigObj = () ->
   return {
     currentScheme: "default"
     autoCompact: true
     recurseWarn: 10
-    schemes: {
-      default:
-        next: 0
-        slots: {}
-    }
+    schemes: ["default"]
   }
 
-initalizeScheme = (scheme) ->
-  schemes[scheme] =
+initSchemeObj = () ->
+  return {
     next: 0
     slots: {}
-  saveSchemes()
+  }
 
 loadSchemes = () ->
-  data = util.loadJsonFile(schemesFile, initSchemesObj)
+  ensureDirExists schemeDir
+  data = util.loadJsonFile(dataFile, initConfigObj)
   {currentScheme, autoCompact, recurseWarn, schemes} = data
-  scheme = schemes[currentScheme]
-  return if _.isObject(scheme)
-  console.error chalk.yellow "currentScheme is missing from schemes.json, setting to 'default' scheme"
-  initalizeScheme "default" unless _.isObject(schemes["default"])
-  currentScheme = "default"
-  scheme = schemes[currentScheme]
+  unless _.contains schemes, currentScheme
+    schemes.push currentScheme
+    saveSchemeConfig()
+
+  schemeFile = path.join(schemeDir, "#{currentScheme}.json")
+  scheme = util.loadJsonFile(schemeFile, initSchemeObj)
 
 util.emitter.on "config:loaded", (config, dataDir) ->
-  schemesFile = path.join(dataDir, "schemes.json")
+  schemeDir = path.join(dataDir, "schemes")
+  dataFile = path.join(dataDir, "schemes.json")
   {colors} = config
 
 #
@@ -78,38 +80,39 @@ schemeCommands =
 
     data.currentScheme = currentScheme = name
     console.error "changing scheme to #{chalk.cyan name}"
-    if _.isObject(data.schemes[name])
-      saveSchemes()
-    else
-      console.error chalk.grey "initializing empty scheme object"
-      initalizeScheme name
+    saveSchemeConfig()
     programDone()
 
   listSchemes: () ->
-    console.error "schemes"
+    console.error "listing schemes"
     console.error "------------------------------"
-    for scheme in _.keys(data.schemes)
+    for scheme in schemes
       console.error chalk.gray scheme
 
   dropScheme: (_scheme) ->
     _scheme ?= currentScheme
     console.error "Droping scheme #{chalk.cyan _scheme}"
-    delete schemes[_scheme]
+    data.schemes = schemes = _.without(schemes, currentScheme)
     data.currentScheme = currentScheme = "default" if _scheme is currentScheme
-    saveSchemes()
+    saveSchemeConfig()
+    fs.unlinkSync(schemeFile) if fs.existsSync(schemeFile)
     programDone()
 
   renameScheme: (name) ->
     return if name is currentScheme
     schemeMsg "renaming scheme #{currentScheme} to '#{name}'"
-    schemes[name] = scheme
-    delete schemes[currentScheme]
+    data.schemes = schemes = _.without(schemes, currentScheme)
+    schemes.push name
     data.currentScheme = currentScheme = name
-    saveSchemes()
+    saveSchemeConfig()
+
+    oldSchemeFile = schemeFile
+    schemeFile = path.join(schemeDir, "#{currentScheme}.json")
+    fs.renameSync(oldSchemeFile, schemeFile) if fs.existsSync(oldSchemeFile)
     programDone()
 
   listSlots: () ->
-    return schemeMsg "no slots in scheme" unless scheme.slots.length > 0
+    return schemeMsg "no slots in scheme" if _.isEmpty(scheme.slots)
     schemeMsg "listing slots"
     console.error "------------------------------"
     slots = _.sortBy(_.pairs(scheme.slots), (pair) -> parseInt(pair[0]))
@@ -156,7 +159,7 @@ schemeCommands =
     schemeMsg "#{chalk.red 'removing'} path #{scheme.slots[idx]} in slot #{chalk.yellow idx}"
     delete scheme.slots[idx]
     doAutoCompact() if autoCompact
-    saveSchemes()
+    saveCurrentScheme()
     programDone()
 
   swapSlots: (idx1, idx2) ->
@@ -170,7 +173,7 @@ schemeCommands =
     temp = scheme.slots[idx1]
     scheme.slots[idx1] = scheme.slots[idx2]
     scheme.slots[idx2] = temp
-    saveSchemes()
+    saveCurrentScheme()
     programDone()
 
   saveSlot: (idx, _path) ->
@@ -190,7 +193,7 @@ schemeCommands =
     doAutoCompact() if autoCompact and idx > scheme.next
     scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
     schemeMsg "#{chalk.green 'saving'} slot #{chalk.yellow idx} as #{chalk.grey _path}"
-    saveSchemes()
+    saveCurrentScheme()
     programDone()
 
   saveSlotsRecurse: (_path) ->
@@ -216,7 +219,7 @@ schemeCommands =
       doAutoCompact() if autoCompact
       scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
       schemeMsg chalk.green "saved #{paths.length} directories"
-      saveSchemes()
+      saveCurrentScheme()
       programDone()
 
     if (paths.length > recurseWarn)
@@ -230,7 +233,7 @@ schemeCommands =
     schemeMsg chalk.yellow "clearing all slots"
     scheme.slots = {}
     scheme.next = 0
-    saveSchemes()
+    saveCurrentScheme()
     programDone()
 
   compactSlots: () ->
@@ -245,7 +248,7 @@ schemeCommands =
     for obj, idx in slotsArray
       scheme.slots[idx] = obj.slot
     scheme.next = parseInt(_.max(_.keys(scheme.slots))) + 1
-    saveSchemes()
+    saveCurrentScheme()
     programDone()
 
 cmds.extend schemeCommands
