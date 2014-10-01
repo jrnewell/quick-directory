@@ -6,7 +6,7 @@ util = require("./util")
 config = require("./config")
 cmds = require("./commands")
 
-{runCommand, emitter, programDone} = util
+{runCommand, emitter, programDone, optionToBool} = util
 
 # source plugin files
 plugins = util.requireFiles path.join(__dirname, "plugins"), /(\.coffee|\.js)$/
@@ -121,6 +121,9 @@ module.exports.load = (_plugin) ->
 
   commander
     .version(require("../package.json").version)
+    .option('-h, --home <path>', 'configuration file path')
+    .option('-c, --color <bool>', 'display output using color', optionToBool)
+    .option('-q, --quiet', 'display minimal output')
 
   commander
     .command("init [cache]")

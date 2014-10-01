@@ -2,6 +2,7 @@ fs = require("fs")
 path = require("path")
 chalk = require("chalk")
 util = require("./util")
+commander = require("commander")
 
 {saveJsonFile, loadJsonFile, ensureDirExists, emitter} = util
 dataDir = config = configFile = undefined
@@ -16,11 +17,11 @@ initConfigObj = () ->
   }
 
 loadConfig = () ->
-  dataDir = process.env.QDHOME ? path.join(process.env.HOME, ".quick-dir")
+  dataDir = commander.home ? process.env.QDHOME ? path.join(process.env.HOME, ".quick-dir")
   ensureDirExists dataDir
   configFile = path.join(dataDir, "config.json")
   config = loadJsonFile(configFile, initConfigObj)
-  config.colors = true unless config.colors?
+  config.colors = commander.color ? config.colors ? true
   chalk.enabled = config.colors
   emitter.emit "config:loaded", config, dataDir
 

@@ -71,7 +71,7 @@ historyCommands =
     programDone()
 
   listHistory: () ->
-    return schemeMsg "no slots in history" unless scheme.slots.length > 0
+    return histMsg "no slots in history" unless history.length > 0
     histMsg "listing slots", "history"
     console.error "------------------------------"
     for _path, idx in history

@@ -80,9 +80,6 @@ fuzzySearch = (str, slots) ->
     # sort by index
     slotResults = _.sortBy(slotResults, "x")
 
-    #console.error slot
-    #console.dir slotResults
-
     # calulate score
     score = 0
     prev = -1
@@ -117,6 +114,11 @@ confirmPrompt = (message, callback) ->
     confirm = (results.yesno and (results.yesno is "yes" or results.yesno is "y"))
     return callback(null, confirm)
 
+optionToBool = (val) ->
+  switch val.toLowerCase()
+    when "false", "f", "no", "n", "0" then false
+    else true
+
 module.exports = {
   emitter: emitter
   fatalError: fatalError
@@ -130,4 +132,5 @@ module.exports = {
   requireFiles: requireFiles
   fuzzySearch: fuzzySearch
   confirmPrompt: confirmPrompt
+  optionToBool: optionToBool
 }
