@@ -79,6 +79,7 @@ fuzzySearch = (str, slots) ->
       if x >= 0
         slotResults.push
           tokenNum: tokenNum
+          slotLeng: slot.length
           x: x
 
     # sort by index
@@ -96,7 +97,7 @@ fuzzySearch = (str, slots) ->
         else
           1
 
-      score += point + (result.x / 100)
+      score += point + (result.x / 100) + ((0 - result.slotLeng) / 1000)
       prev = result.tokenNum
 
     scores.push
