@@ -2,12 +2,13 @@ commander = require("commander")
 chalk = require("chalk")
 fs = require("fs")
 path = require("path")
+os = require("os")
 _ = require("lodash")
 cmds = require("../commands")
 util = require("../util")
 
 {vLog, fatalError, infoMsg, programDone, ensureDirExists, runCommand, callCommand, confirmPrompt} = util
-colors = schemeDir = schemes = dataFile = data = schemeFile =
+colors = schemeDir = schemes = dataFile = data = schemeFile = caseInsensitive =
   scheme = currentScheme = autoCompact = recurseWarn = undefined
 
 #
@@ -37,6 +38,13 @@ initSchemeObj = () ->
 loadSchemes = () ->
   ensureDirExists schemeDir
   data = util.loadJsonFile(dataFile, initConfigObj)
+
+  # defaults
+  data.currentScheme ?= "default"
+  data.autoCompact ?= true
+  data.recurseWarn ?= 10
+  data.schemes ?= ["default"]
+
   {currentScheme, autoCompact, recurseWarn, schemes} = data
   unless _.contains schemes, currentScheme
     schemes.push currentScheme
@@ -50,6 +58,7 @@ loadSchemes = () ->
   saveCurrentScheme()
 
 util.emitter.on "config:loaded", (config, dataDir) ->
+  caseInsensitive = os.platform() is "darwin" or os.platform().match /^win/
   schemeDir = path.join(dataDir, "schemes")
   dataFile = path.join(dataDir, "schemes.json")
   {colors} = config
@@ -65,9 +74,13 @@ doAutoCompact = () ->
   schemeMsg "auto compacting is enabled"
   callCommand "compactSlots"
 
+# ignore case sensitivty
 getPathDuplicate = (_path) ->
   for idx, schemePath of scheme.slots
-    return idx if path.resolve(schemePath) is path.resolve(_path)
+    if caseInsensitive
+      return idx if path.resolve(schemePath).toLowerCase() is path.resolve(_path).toLowerCase()
+    else
+      return idx if path.resolve(schemePath) is path.resolve(_path)
   return null
 
 runSchemesCommand = (cmd) ->
@@ -144,7 +157,7 @@ schemeCommands =
     unless idx.match /^[0-9]+$/
       fatalError "#{currentScheme} scheme is empty" if _.isEmpty(scheme.slots)
       args = _commander.parent.rawArgs[3..]
-      _path = util.fuzzySearch args, scheme.slots
+      _path = util.fuzzySearch args, scheme.slots, _commander.ignoreCase
       schemeMsg "#{chalk.green 'changing'} working directory to #{chalk.grey _path}"
       console.log _path
       programDone()
@@ -200,15 +213,18 @@ schemeCommands =
     saveCurrentScheme()
     programDone()
 
-  saveSlotsRecurse: (_path) ->
+  saveSlotsRecurse: (_path, _commander) ->
     _path = process.cwd() unless _.isString(_path)
     fatalError "path #{_path} does not exist" unless fs.existsSync _path
-    # TODO: check for too many sub directories
     paths = [_path]
-    fs.readdirSync(_path).forEach (dir) ->
-      fullPath = path.join(_path, dir)
-      stats = fs.statSync(fullPath)
-      paths.push(fullPath) if stats.isDirectory()
+    addSubDirs = (_path) ->
+      fs.readdirSync(_path).forEach (dir) ->
+        fullPath = path.join(_path, dir)
+        stats = fs.statSync(fullPath)
+        if stats.isDirectory()
+          paths.push(fullPath)
+          addSubDirs fullPath if _commander.children
+    addSubDirs _path
 
     saveSlots = () ->
       next = scheme.next
@@ -294,6 +310,7 @@ module.exports.load = () ->
   commander
     .command("get <idx>")
     .alias("go")
+    .option('-i, --ignore-case', 'ignore case on fuzzy search')
     .description("change to slot <idx> (you can also give text for a fuzzy search)")
     .action(runSchemesCommand("getSlot"))
 
@@ -314,6 +331,7 @@ module.exports.load = () ->
 
   commander
     .command("setr [path]")
+    .option('-C, --no-children', 'only add sub-directories one level deep')
     .description("recursively set all the slots to child directories using the next highest slot numbers (cwd is used if no path is given)")
     .action(runSchemesCommand("saveSlotsRecurse"))
 

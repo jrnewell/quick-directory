@@ -9,7 +9,7 @@ commander = require("commander")
 cmds = require("./commands")
 
 {commands} = cmds
-loadConfig = undefined
+config = loadConfig = undefined
 emitter = new EventEmitter()
 disableExit = false
 
@@ -44,7 +44,7 @@ ensureDirExists = (path) ->
 
 runCommand = (cmd, initFunc) ->
   return () ->
-    loadConfig()
+    config = loadConfig()
     initFunc() if _.isFunction(initFunc)
     commands[cmd].apply(this, arguments)
 
@@ -67,11 +67,18 @@ requireFiles = (dirPath, regex) ->
       results[path.basename(file, path.extname(file))] = result
     return results
 
-fuzzySearch = (str, slots) ->
+fuzzySearch = (str, slots, ignoreCase) ->
   slots = _.values(slots) if _.isObject(slots)
   return unless _.isArray(slots)
   tokens = (if _.isString(str) then str.split /\W+/ else str)
   scores = []
+
+  # if we are ignoring case, turn everything into lowercase
+  ignoreCase ?= config.ignoreCaseOnSearch
+  if ignoreCase
+    slots = (slot.toLowerCase() for slot in slots)
+    tokens = (token.toLowerCase() for token in tokens)
+
   for slot in slots
     slotResults = []
     for token, tokenNum in tokens
@@ -114,6 +121,7 @@ confirmPrompt = (message, callback) ->
     warning: "Must respond yes or no"
     default: "no"
 
+  prompt.message = "(confirm)"
   prompt.get promptConfig, (err, results) ->
     return callback(err) if err
     confirm = (results.yesno and (results.yesno is "yes" or results.yesno is "y"))

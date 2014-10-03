@@ -14,6 +14,7 @@ saveConfg = () ->
 initConfigObj = () ->
   return {
     colors: true
+    ignoreCaseOnSearch: true
   }
 
 loadConfig = () ->
@@ -21,9 +22,14 @@ loadConfig = () ->
   ensureDirExists dataDir
   configFile = path.join(dataDir, "config.json")
   config = loadJsonFile(configFile, initConfigObj)
+
+  # defaults
   config.colors = commander.color ? config.colors ? true
+  config.ignoreCaseOnSearch ?= true
+
   chalk.enabled = config.colors
   emitter.emit "config:loaded", config, dataDir
+  return config
 
 getConfig = () ->
   return config

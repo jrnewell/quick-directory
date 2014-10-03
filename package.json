@@ -1,6 +1,6 @@
 {
   "name": "quick-directory",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A productivity utility to quickly change directories",
   "bin": {
     "qd": "./qd.js",
